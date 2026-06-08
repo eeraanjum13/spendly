@@ -1,0 +1,26 @@
+In `templates/base.html`, add two links to the footer:
+ 
+- Terms and Conditions → href="#"
+- Privacy Policy → href="#"
+ 
+Both links are placeholders (#) — the real URLs aren't ready yet.
+ 
+Constraints:
+- Touch only the footer section. No other changes to the file.
+- Match the existing footer markup style (spacing, element tags, class conventions).
+ 
+When done, commit with exactly this message:
+terms and privacy links added to footer
+
+Create a "Terms and Conditions" page for Spendly.
+
+1. Add a new route in [@app.py](http://app.py/):
+GET /terms → renders templates/terms.html
+2. Create templates/terms.html with generic terms and conditions
+content appropriate for a personal expense tracking app.
+Include sections like: Acceptance of Terms, Use of Service,
+User Data, Limitations of Liability, and Changes to Terms.
+Extend base.html if it exists, otherwise match the style of
+landing.html.
+3. In @templates/landing.html, update the "Terms and Conditions"
+footer link href from "#" to "/terms".
