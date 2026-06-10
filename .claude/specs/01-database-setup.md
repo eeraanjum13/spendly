@@ -1,129 +1,171 @@
-# Plan: 01 — Database Setup
+## 1. Overview
 
-## Context
+Replace the stub in `database/db.py` with a working SQLite implementation.
 
-`database/db.py` is currently a stub (comment-only file). All future features — auth, profile, expenses — depend on a working SQLite data layer. This step implements the three core helpers and wires them into `app.py` startup.
+This step establishes the **data layer foundation** for the Spendly application.
 
----
-
-## Files to Change
-
-- `database/db.py` — implement all three functions (currently empty stub)
-- `app.py` — add imports and call `init_db()` / `seed_db()` on startup
+All future features (authentication, profile, expense tracking) depend on this being correctly implemented.
 
 ---
 
-## Implementation
+## 2. Depends on
 
-### `database/db.py`
-
-```python
-import sqlite3
-import os
-from werkzeug.security import generate_password_hash
-
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'database', 'spendly.db')
-
-
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
-
-
-def init_db():
-    conn = get_db()
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            name          TEXT    NOT NULL,
-            email         TEXT    NOT NULL UNIQUE,
-            password_hash TEXT    NOT NULL,
-            created_at    TEXT    DEFAULT (datetime('now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS expenses (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     INTEGER NOT NULL REFERENCES users(id),
-            amount      REAL    NOT NULL,
-            category    TEXT    NOT NULL,
-            date        TEXT    NOT NULL,
-            description TEXT,
-            created_at  TEXT    DEFAULT (datetime('now'))
-        );
-    """)
-    conn.commit()
-    conn.close()
-
-
-def seed_db():
-    conn = get_db()
-    if conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] > 0:
-        conn.close()
-        return
-
-    cur = conn.execute(
-        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-        ("Demo User", "demo@spendly.com", generate_password_hash("demo123")),
-    )
-    user_id = cur.lastrowid
-
-    expenses = [
-        (user_id, 42.50,  "Food",          "2026-06-01", "Grocery run"),
-        (user_id, 15.00,  "Transport",     "2026-06-02", "Bus pass top-up"),
-        (user_id, 120.00, "Bills",         "2026-06-03", "Electricity bill"),
-        (user_id, 30.00,  "Health",        "2026-06-04", "Pharmacy"),
-        (user_id, 25.00,  "Entertainment", "2026-06-05", "Cinema ticket"),
-        (user_id, 85.00,  "Shopping",      "2026-06-06", "New shoes"),
-        (user_id, 10.00,  "Other",         "2026-06-07", "Miscellaneous"),
-        (user_id, 55.00,  "Food",          "2026-06-08", "Restaurant dinner"),
-    ]
-    conn.executemany(
-        "INSERT INTO expenses (user_id, amount, category, date, description) VALUES (?, ?, ?, ?, ?)",
-        expenses,
-    )
-    conn.commit()
-    conn.close()
-```
-
-**Key decisions:**
-- `DB_PATH` uses `os.path` relative to `db.py` location → resolves to `database/spendly.db` in project root
-- `PRAGMA foreign_keys = ON` called inside `get_db()` so every connection enforces FK constraints
-- `seed_db()` checks row count before inserting — idempotent across restarts
-- All SQL uses `?` placeholders — no f-strings or string formatting
-- Amounts stored as `REAL`; dates as `TEXT` in `YYYY-MM-DD` format
+Nothing — this is the first step.
 
 ---
 
-### `app.py`
+## 3. Routes
 
-Add three lines at the top (imports) and a startup block before `if __name__ == "__main__"`:
+- No new routes
+- Existing placeholder routes in `app.py` remain unchanged
 
-```python
-# Add to imports
-from database.db import get_db, init_db, seed_db
-
-# Add before if __name__ == "__main__":
-with app.app_context():
-    init_db()
-    seed_db()
-```
-
-No existing routes change.
+## 4. Database Schema
 
 ---
 
-## Verification
+### A. users
+Column	Type	Constraints
+id	INTEGER	Primary key, autoincrement
+name	TEXT	Not null
+email	TEXT	Unique, not null
+password_hash	TEXT	Not null
+created_at	TEXT	Default datetime('now')
 
-1. `python app.py` — app starts without errors, `database/spendly.db` file appears
-2. Open a Python shell:
-   ```python
-   from database.db import get_db
-   db = get_db()
-   print(list(db.execute("SELECT * FROM users").fetchall()))
-   print(list(db.execute("SELECT * FROM expenses").fetchall()))
-   ```
-   Expect: 1 user row, 8 expense rows
-3. Run `python app.py` a second time — no duplicate rows (seed guard works)
-4. `pytest` — existing tests remain green
+### B. expenses
+| Column | Type | Constraints |
+| --- | --- | --- |
+| id | INTEGER | Primary key, autoincrement |
+| user_id | INTEGER | Foreign key → users.id, not null |
+| amount | REAL | Not null |
+| category | TEXT | Not null |
+| date | TEXT | Not null (YYYY-MM-DD format) |
+| description | TEXT | Nullable |
+| created_at | TEXT | Default datetime('now') |
+
+## 5. Functions to Implement (`database/db.py`)
+
+---
+
+### A. `get_db()`
+
+- Opens connection to `spendly.db` (or `expense_tracker.db`) in project root
+- Sets:
+    - `row_factory = sqlite3.Row`
+    - `PRAGMA foreign_keys = ON`
+- Returns the connection
+
+---
+
+### B. `init_db()`
+
+- Creates both tables using `CREATE TABLE IF NOT EXISTS`
+- Safe to call multiple times
+- Ensures schema is ready before app usage
+
+### C. `seed_db()`
+
+- Checks if `users` table already contains data
+    - If yes → return early (no duplication)
+- Inserts one demo user:
+    - name: Demo User
+    - email: demo@spendly.com
+    - password: demo123 (hashed using `werkzeug`)
+- Inserts **8 sample expenses**:
+    - All linked to demo user
+    - Cover multiple categories
+    - Dates spread across current month
+    - At least one expense per category
+
+    ## 6. Changes to `app.py`
+
+- Import:
+    - `get_db`
+    - `init_db`
+    - `seed_db`
+- Call `init_db()` and `seed_db()` inside `app.app_context()` on startup
+- Ensure DB is ready before routes are used
+
+---
+
+## 7. Files to Change
+
+- `database/db.py` → implement all functions
+- `app.py` → add imports and startup calls
+
+## 8. Files to Create
+
+- None
+
+---
+
+## 9. Dependencies
+
+- No new pip packages
+- Use:
+    - `sqlite3` (standard library)
+    - `werkzeug.security` (already installed)
+
+---
+
+## 10. Categories (Fixed List)
+
+Use exactly these values:
+
+- Food
+- Transport
+- Bills
+- Health
+- Entertainment
+- Shopping
+- Other
+
+## 11. Rules for Implementation
+
+- No ORMs (no SQLAlchemy)
+- Use **parameterized queries only**
+- Never use string formatting in SQL
+- Enable `PRAGMA foreign_keys = ON` on every connection
+- Store `amount` as REAL (float), not INTEGER
+- Hash passwords using:
+    
+    ```
+    fromwerkzeug.securityimportgenerate_password_hash
+    ```
+    
+- `seed_db()` must prevent duplicate inserts
+- Dates must follow **YYYY-MM-DD format consistently**
+
+
+## 12. Expected Behavior
+
+- `get_db()` returns a working connection with:
+    - dictionary-like row access
+    - foreign key enforcement enabled
+- `init_db()`:
+    - creates tables safely
+    - does not fail on repeated runs
+- `seed_db()`:
+    - inserts demo data only once
+    - does not duplicate records on multiple runs
+- Database enforces:
+    - unique email constraint
+    - valid foreign key relationships
+
+---
+
+## 13. Error Handling Expectations
+
+- Inserting duplicate email → should fail (UNIQUE constraint)
+- Inserting expense with invalid `user_id` → should fail (foreign key constraint)
+- Invalid queries → should raise clear errors for debugging
+
+## 14. Definition of Done
+
+- [ ]  Database file is created on app startup
+- [ ]  Both tables exist with correct schema and constraints
+- [ ]  Demo user exists with hashed password
+- [ ]  8 sample expenses exist across categories
+- [ ]  No duplicate seed data on repeated runs
+- [ ]  App starts without errors
+- [ ]  Foreign key enforcement works
+- [ ]  All queries use parameterized SQL
