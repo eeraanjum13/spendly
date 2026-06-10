@@ -1,3 +1,23 @@
+# Plan: 01 — Database Setup
+
+## Context
+
+`database/db.py` is currently a stub (comment-only file). All future features — auth, profile, expenses — depend on a working SQLite data layer. This step implements the three core helpers and wires them into `app.py` startup.
+
+---
+
+## Files to Change
+
+- `database/db.py` — implement all three functions (currently empty stub)
+- `app.py` — add imports and call `init_db()` / `seed_db()` on startup
+
+---
+
+## Implementation
+
+### `database/db.py`
+
+```python
 import sqlite3
 import os
 from werkzeug.security import generate_password_hash
@@ -45,7 +65,7 @@ def seed_db():
 
     cur = conn.execute(
         "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-        ("Demo User", "demo@spendly.com", generate_password_hash("demo123", method="pbkdf2:sha256")),
+        ("Demo User", "demo@spendly.com", generate_password_hash("demo123")),
     )
     user_id = cur.lastrowid
 
@@ -65,24 +85,45 @@ def seed_db():
     )
     conn.commit()
     conn.close()
+```
 
+**Key decisions:**
+- `DB_PATH` uses `os.path` relative to `db.py` location → resolves to `database/spendly.db` in project root
+- `PRAGMA foreign_keys = ON` called inside `get_db()` so every connection enforces FK constraints
+- `seed_db()` checks row count before inserting — idempotent across restarts
+- All SQL uses `?` placeholders — no f-strings or string formatting
+- Amounts stored as `REAL`; dates as `TEXT` in `YYYY-MM-DD` format
 
-def get_user_by_email(email):
-    conn = get_db()
-    user = conn.execute(
-        "SELECT * FROM users WHERE email = ?", (email,)
-    ).fetchone()
-    conn.close()
-    return user
+---
 
+### `app.py`
 
-def create_user(name, email, password_hash):
-    conn = get_db()
-    cur = conn.execute(
-        "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-        (name, email, password_hash),
-    )
-    conn.commit()
-    user_id = cur.lastrowid
-    conn.close()
-    return user_id
+Add three lines at the top (imports) and a startup block before `if __name__ == "__main__"`:
+
+```python
+# Add to imports
+from database.db import get_db, init_db, seed_db
+
+# Add before if __name__ == "__main__":
+with app.app_context():
+    init_db()
+    seed_db()
+```
+
+No existing routes change.
+
+---
+
+## Verification
+
+1. `python app.py` — app starts without errors, `database/spendly.db` file appears
+2. Open a Python shell:
+   ```python
+   from database.db import get_db
+   db = get_db()
+   print(list(db.execute("SELECT * FROM users").fetchall()))
+   print(list(db.execute("SELECT * FROM expenses").fetchall()))
+   ```
+   Expect: 1 user row, 8 expense rows
+3. Run `python app.py` a second time — no duplicate rows (seed guard works)
+4. `pytest` — existing tests remain green
