@@ -76,7 +76,7 @@ created_at	TEXT	Default datetime('now')
     - Dates spread across current month
     - At least one expense per category
 
-## 6. Changes to `app.py`
+    ## 6. Changes to `app.py`
 
 - Import:
     - `get_db`
@@ -85,6 +85,7 @@ created_at	TEXT	Default datetime('now')
 - Call `init_db()` and `seed_db()` inside `app.app_context()` on startup
 - Ensure DB is ready before routes are used
 
+---
 
 ## 7. Files to Change
 
@@ -134,6 +135,7 @@ Use exactly these values:
 - `seed_db()` must prevent duplicate inserts
 - Dates must follow **YYYY-MM-DD format consistently**
 
+
 ## 12. Expected Behavior
 
 - `get_db()` returns a working connection with:
@@ -157,9 +159,7 @@ Use exactly these values:
 - Inserting expense with invalid `user_id` → should fail (foreign key constraint)
 - Invalid queries → should raise clear errors for debugging
 
----
-
-## 14. Definition of Done // Acceptance criteria
+## 14. Definition of Done
 
 - [ ]  Database file is created on app startup
 - [ ]  Both tables exist with correct schema and constraints
@@ -169,3 +169,4 @@ Use exactly these values:
 - [ ]  App starts without errors
 - [ ]  Foreign key enforcement works
 - [ ]  All queries use parameterized SQL
+
