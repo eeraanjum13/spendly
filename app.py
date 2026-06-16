@@ -1,7 +1,7 @@
-from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import get_db, init_db, seed_db, get_user_by_email, create_user, get_user_by_id
+from database.db import get_db, init_db, seed_db, get_user_by_email, create_user
+from database import queries
 
 app = Flask(__name__)
 app.secret_key = "spendly-dev-secret"
@@ -87,39 +87,23 @@ def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
 
-    user = get_user_by_id(session["user_id"])
+    user = queries.get_user_by_id(session["user_id"])
     if not user:
         session.clear()
         return redirect(url_for("login"))
-    stats = {
-        "total_spent": "₹382.50",
-        "transactions": 8,
-        "top_category": "Food",
-    }
-    expenses = [
-        {"date": "Jun 8, 2026", "description": "Restaurant dinner",  "category": "Food",          "amount": "₹55.00"},
-        {"date": "Jun 6, 2026", "description": "New shoes",           "category": "Shopping",      "amount": "₹85.00"},
-        {"date": "Jun 5, 2026", "description": "Cinema ticket",       "category": "Entertainment", "amount": "₹25.00"},
-        {"date": "Jun 4, 2026", "description": "Pharmacy",            "category": "Health",        "amount": "₹30.00"},
-        {"date": "Jun 3, 2026", "description": "Electricity bill",    "category": "Bills",         "amount": "₹120.00"},
-        {"date": "Jun 2, 2026", "description": "Bus pass top-up",     "category": "Transport",     "amount": "₹15.00"},
-        {"date": "Jun 1, 2026", "description": "Grocery run",         "category": "Food",          "amount": "₹42.50"},
-        {"date": "Jun 7, 2026", "description": "Miscellaneous",       "category": "Other",         "amount": "₹10.00"},
-    ]
-    categories = [
-        {"name": "Bills",         "amount": "₹120.00", "pct": 31},
-        {"name": "Food",          "amount": "₹97.50",  "pct": 25},
-        {"name": "Shopping",      "amount": "₹85.00",  "pct": 22},
-        {"name": "Health",        "amount": "₹30.00",  "pct": 8},
-        {"name": "Entertainment", "amount": "₹25.00",  "pct": 7},
-        {"name": "Transport",     "amount": "₹15.00",  "pct": 4},
-        {"name": "Other",         "amount": "₹10.00",  "pct": 3},
-    ]
-    member_since = datetime.strptime(
-        user["created_at"][:10], "%Y-%m-%d"
-    ).strftime("%B %-d, %Y")
-    return render_template("profile.html", user=user, member_since=member_since,
-                           stats=stats, expenses=expenses, categories=categories)
+
+    stats       = queries.get_summary_stats(session["user_id"])
+    expenses    = queries.get_recent_transactions(session["user_id"])
+    categories  = queries.get_category_breakdown(session["user_id"])
+
+    return render_template(
+        "profile.html",
+        user=user,
+        member_since=user["member_since"],
+        stats=stats,
+        expenses=expenses,
+        categories=categories,
+    )
 
 
 @app.route("/expenses/add")
