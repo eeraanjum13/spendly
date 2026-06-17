@@ -430,6 +430,11 @@ a { color: inherit; text-decoration: none; }
     margin-bottom: 0.4rem;
 }
 
+.label-optional {
+    font-weight: 400;
+    color: var(--ink-faint);
+}
+
 .form-input {
     width: 100%;
     padding: 0.6rem 0.875rem;

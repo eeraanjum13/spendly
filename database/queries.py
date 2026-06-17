@@ -1,6 +1,8 @@
 from datetime import datetime
 from database.db import get_db
 
+VALID_CATEGORIES = ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]
+
 
 def _date_clause(from_date, to_date):
     if from_date and to_date:
@@ -75,6 +77,18 @@ def get_recent_transactions(user_id, limit=10, from_date=None, to_date=None):
             "amount":      f"₹{row['amount']:.2f}",
         })
     return result
+
+
+def insert_expense(user_id, amount, category, date, description):
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO expenses (user_id, amount, category, date, description) VALUES (?, ?, ?, ?, ?)",
+            (user_id, amount, category, date, description),
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_category_breakdown(user_id, from_date=None, to_date=None):
