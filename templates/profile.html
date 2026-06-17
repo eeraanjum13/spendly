@@ -4,6 +4,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/filter.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -17,6 +18,35 @@
             <p class="profile-since">Member since {{ member_since }}</p>
         </div>
     </section>
+
+    <div class="filter-bar">
+        <div class="filter-presets">
+            <a class="filter-preset {% if not from_date %}active{% endif %}"
+               href="{{ url_for('profile') }}">All Time</a>
+            <a class="filter-preset {% if from_date == month_start and to_date == month_end %}active{% endif %}"
+               href="{{ url_for('profile', from_date=month_start, to_date=month_end) }}">This Month</a>
+            <a class="filter-preset {% if from_date == last30_start and to_date == last30_end %}active{% endif %}"
+               href="{{ url_for('profile', from_date=last30_start, to_date=last30_end) }}">Last 30 Days</a>
+        </div>
+
+        <form class="filter-form" method="GET" action="{{ url_for('profile') }}">
+            <input class="filter-date-input" type="date" name="from_date"
+                   value="{{ from_date or '' }}">
+            <span>–</span>
+            <input class="filter-date-input" type="date" name="to_date"
+                   value="{{ to_date or '' }}">
+            <button class="filter-submit" type="submit">Apply</button>
+        </form>
+
+        <p class="filter-label">
+            Showing:
+            {% if from_date and to_date %}
+                {{ from_date }} – {{ to_date }}
+            {% else %}
+                All time
+            {% endif %}
+        </p>
+    </div>
 
     <section class="stats-row">
         <div class="stat-card">
