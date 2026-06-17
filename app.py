@@ -1,3 +1,5 @@
+import calendar
+from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, create_user
@@ -92,9 +94,32 @@ def profile():
         session.clear()
         return redirect(url_for("login"))
 
-    stats       = queries.get_summary_stats(session["user_id"])
-    expenses    = queries.get_recent_transactions(session["user_id"])
-    categories  = queries.get_category_breakdown(session["user_id"])
+    raw_from = request.args.get("from_date", "").strip()
+    raw_to   = request.args.get("to_date", "").strip()
+
+    from_date = to_date = None
+    if raw_from and raw_to:
+        try:
+            from_date = datetime.strptime(raw_from, "%Y-%m-%d").date()
+            to_date   = datetime.strptime(raw_to,   "%Y-%m-%d").date()
+            if from_date > to_date:
+                from_date = to_date = None
+        except ValueError:
+            pass
+
+    from_str = from_date.isoformat() if from_date else None
+    to_str   = to_date.isoformat()   if to_date   else None
+
+    today        = date.today()
+    today_str    = today.isoformat()
+    month_start  = today.replace(day=1).isoformat()
+    month_end    = today.replace(day=calendar.monthrange(today.year, today.month)[1]).isoformat()
+    last30_start = (today - timedelta(days=30)).isoformat()
+
+    user_id    = session["user_id"]
+    stats      = queries.get_summary_stats(user_id, from_str, to_str)
+    expenses   = queries.get_recent_transactions(user_id, from_date=from_str, to_date=to_str)
+    categories = queries.get_category_breakdown(user_id, from_str, to_str)
 
     return render_template(
         "profile.html",
@@ -103,6 +128,12 @@ def profile():
         stats=stats,
         expenses=expenses,
         categories=categories,
+        from_date=from_str,
+        to_date=to_str,
+        month_start=month_start,
+        month_end=month_end,
+        last30_start=last30_start,
+        last30_end=today_str,
     )
 
 
