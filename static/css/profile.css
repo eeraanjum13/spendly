@@ -111,6 +111,35 @@
     margin-bottom: 1.25rem;
 }
 
+.card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.card-title-row .card-title {
+    margin-bottom: 0;
+}
+
+.btn-add-expense {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    background: var(--accent-light);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 0.35rem 0.75rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-add-expense:hover {
+    background: var(--accent);
+    color: var(--paper-card);
+}
+
 /* ------------------------------------------------------------------ */
 /* Transaction table                                                   */
 /* ------------------------------------------------------------------ */

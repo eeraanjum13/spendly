@@ -1,4 +1,5 @@
 import calendar
+import math
 from datetime import date, datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -137,9 +138,57 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    today = date.today().isoformat()
+
+    if request.method == "GET":
+        return render_template("add_expense.html", today=today, categories=queries.VALID_CATEGORIES)
+
+    amount_raw   = request.form.get("amount", "").strip()
+    category     = request.form.get("category", "").strip()
+    date_raw     = request.form.get("date", "").strip()
+    description  = request.form.get("description", "").strip() or None
+
+    def redisplay(error):
+        return render_template(
+            "add_expense.html",
+            error=error,
+            today=today,
+            categories=queries.VALID_CATEGORIES,
+            amount=amount_raw,
+            category=category,
+            date=date_raw,
+            description=description,
+        )
+
+    try:
+        amount = float(amount_raw)
+        if amount <= 0 or not math.isfinite(amount):
+            raise ValueError
+    except ValueError:
+        return redisplay("Amount must be a positive number.")
+
+    if category not in queries.VALID_CATEGORIES:
+        return redisplay("Please select a valid category.")
+
+    try:
+        datetime.strptime(date_raw, "%Y-%m-%d")
+    except ValueError:
+        return redisplay("Please enter a valid date.")
+
+    queries.insert_expense(session["user_id"], amount, category, date_raw, description)
+    return redirect(url_for("profile"), 303)
 
 
 @app.route("/expenses/<int:id>/edit")
