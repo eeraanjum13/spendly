@@ -60,7 +60,7 @@ def get_recent_transactions(user_id, limit=10, from_date=None, to_date=None):
     date_filter, date_params = _date_clause(from_date, to_date)
     try:
         rows = conn.execute(
-            "SELECT date, description, category, amount FROM expenses"
+            "SELECT id, date, description, category, amount FROM expenses"
             " WHERE user_id = ?" + date_filter + " ORDER BY date DESC, id DESC LIMIT ?",
             [user_id] + date_params + [limit],
         ).fetchall()
@@ -71,6 +71,7 @@ def get_recent_transactions(user_id, limit=10, from_date=None, to_date=None):
     for row in rows:
         display_date = datetime.strptime(row["date"], "%Y-%m-%d").strftime("%b %-d, %Y")
         result.append({
+            "id":          row["id"],
             "date":        display_date,
             "description": row["description"],
             "category":    row["category"],
@@ -85,6 +86,30 @@ def insert_expense(user_id, amount, category, date, description):
         conn.execute(
             "INSERT INTO expenses (user_id, amount, category, date, description) VALUES (?, ?, ?, ?, ?)",
             (user_id, amount, category, date, description),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_expense_by_id(expense_id):
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT id, user_id, amount, category, date, description FROM expenses WHERE id = ?",
+            (expense_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    return dict(row) if row else None
+
+
+def update_expense(expense_id, amount, category, date, description):
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? WHERE id = ?",
+            (amount, category, date, description, expense_id),
         )
         conn.commit()
     finally:

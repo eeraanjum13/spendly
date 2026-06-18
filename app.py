@@ -1,7 +1,7 @@
 import calendar
 import math
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db, get_user_by_email, create_user
 from database import queries
@@ -191,9 +191,58 @@ def add_expense():
     return redirect(url_for("profile"), 303)
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    expense = queries.get_expense_by_id(id)
+    if expense is None:
+        abort(404)
+    if expense["user_id"] != session["user_id"]:
+        abort(403)
+
+    if request.method == "GET":
+        return render_template(
+            "edit_expense.html",
+            expense=expense,
+            categories=queries.VALID_CATEGORIES,
+        )
+
+    amount_raw  = request.form.get("amount", "").strip()
+    category    = request.form.get("category", "").strip()
+    date_raw    = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip() or None
+
+    def redisplay(error):
+        return render_template(
+            "edit_expense.html",
+            error=error,
+            categories=queries.VALID_CATEGORIES,
+            expense=expense,
+            amount=amount_raw,
+            category=category,
+            date=date_raw,
+            description=description,
+        )
+
+    try:
+        amount = float(amount_raw)
+        if amount <= 0 or not math.isfinite(amount):
+            raise ValueError
+    except ValueError:
+        return redisplay("Amount must be a positive number.")
+
+    if category not in queries.VALID_CATEGORIES:
+        return redisplay("Please select a valid category.")
+
+    try:
+        datetime.strptime(date_raw, "%Y-%m-%d")
+    except ValueError:
+        return redisplay("Please enter a valid date.")
+
+    queries.update_expense(id, amount, category, date_raw, description)
+    return redirect(url_for("profile"), 303)
 
 
 @app.route("/expenses/<int:id>/delete")
