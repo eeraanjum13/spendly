@@ -186,6 +186,20 @@
     white-space: nowrap;
 }
 
+.txn-actions {
+    text-align: right;
+    padding-left: 1rem;
+    white-space: nowrap;
+}
+
+.edit-link {
+    color: var(--accent);
+    font-size: 0.8125rem;
+    text-decoration: none;
+}
+
+.edit-link:hover { text-decoration: underline; }
+
 /* ------------------------------------------------------------------ */
 /* Category badges                                                     */
 /* ------------------------------------------------------------------ */
